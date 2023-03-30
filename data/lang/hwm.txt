@@ -1,0 +1,34 @@
+[en]
+HWM_RELOAD_INI_FILE = You have successfully reloaded the '%s.ini' file!
+
+HWM_GUNS_ALREADY_ENABLED_RESPAWN = ^1Your ^4guns menu ^1is already ^4enabled ^1and you ^3cannot ^1use it ^4again ^1this ^4spawn^1!
+HWM_GUNS_ALREADY_ENABLED_ROUND = ^1Your ^4guns menu ^1is already ^4enabled ^1and you ^3cannot ^1use it ^4again ^1this ^4round^1!
+
+HWM_SELECT_YOUR_WEAPONS_FIRST = Select your weapons first!
+
+HWM_RE_ENABLED_WEAPONS_MENU = ^1You have successfully ^3re-enabled ^1your ^4weapons menu
+HWM_EQUIP_AVAILABLE_ON_NEW_SPAWN = ^4Equip Menu ^1is ^3available ^1on ^4new spawn^1!
+HWM_RE_OPEN_WEAPONS_MENU = ^1You have successfully ^3re-open ^1your ^4weapons menu^1!
+
+HWM_EQUIP_MENU_TITLE = \wEquip Menu
+HWM_NEW_WEAPONS = New Weapons
+HWM_PREVIOUS_WEAPONS_SELECTED = Previous Setup \y[\r%s \d& \r%s\y]
+HWM_PREVIOUS_WEAPONS_NOT_SELECTED = Previous Setup
+HWM_DONT_SHOW_AGAIN_SELECTED = 2 \d+ \wDon't show menu again
+HWM_DONT_SHOW_AGAIN_NOT_SELECTED = \d2 + Don't show menu again
+
+HWM_SAVE_CHOICE_INFO = ^1Type ^3/%s^1 ^1in chat to ^4re-enable ^1your equip menu!
+
+HWM_CHOOSE_YOUR_WEAPONS_TITLE = \wChoose your weapons:
+HWM_PRIMARY_WEAPON_SELECTED = Primary weapon \y[\r%s\y]
+HWM_SECONDARY_WEAPON_SELECTED = Secondary weapon \y[\r%s\y]
+HWM_PRIMARY_WEAPON_NOT_SELECTED = Primary weapon \y[\rNot selected yet\y]
+HWM_SECONDARY_WEAPON_NOT_SELECTED = Secondary weapon \y[\rNot selected yet\y]
+
+HWM_PRIMARY_WEAPON_TITLE = \wPrimary Weapons:
+HWM_PRIMARY_WEAPON_PRICE_MENU = %s \r[\y%i$\r]
+
+HWM_SECONDARY_WEAPON_TITLE = \wSecondary Weapons:
+HWM_SECONDARY_WEAPON_PRICE_MENU = %s \r[\y%i$\r]
+
+HWM_DONT_HAVE_ENOUGH_MONEY = You don't have enough money!
