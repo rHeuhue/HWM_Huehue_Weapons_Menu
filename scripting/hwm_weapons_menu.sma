@@ -320,10 +320,10 @@ public CBasePlayer_Spawn(id)
 						Toggle_Equip_PlayerCheck(id)
 				}
 
-				set_task_ex(1.0, "UTIL_CheckPlayer_Menu", id + TASKID_REOPEN_MENU, .flags = SetTask_Repeat)
+				if (!task_exists(id + TASKID_REOPEN_MENU))
+					set_task_ex(1.0, "UTIL_CheckPlayer_Menu", id + TASKID_REOPEN_MENU, .flags = SetTask_Repeat)
 			}
-
-			if (is_user_bot(id) && g_eCvars[HWM_GIVE_WEAPONS_TO_BOTS])
+			else if (g_eCvars[HWM_GIVE_WEAPONS_TO_BOTS])
 			{
 				static szWeaponShort[eWeaponType][MAX_NAME_LENGTH], iWeapon[eWeaponType], iArraySize[eSections], iRandomWeaponID[eWeaponType], i
 
@@ -377,7 +377,7 @@ public UTIL_CheckPlayer_Menu(id)
 {
 	id -= TASKID_REOPEN_MENU
 
-	if (!is_user_connected(id))
+	if (!is_user_alive(id))
 	{
 		if (task_exists(id + TASKID_REOPEN_MENU))
 			remove_task(id + TASKID_REOPEN_MENU)
