@@ -303,10 +303,13 @@ public CBasePlayer_Spawn(id)
 
 			if (!is_user_bot(id))
 			{
-				if (g_eCvars[HWM_MENU_OPEN_AFTER] > 0)
-					set_task(g_eCvars[HWM_MENU_OPEN_AFTER], "Toggle_Equip_PlayerCheck", id)
-				else
-					Toggle_Equip_PlayerCheck(id)
+				if (!is_in_menu(id))
+				{
+					if (g_eCvars[HWM_MENU_OPEN_AFTER] > 0)
+						set_task(g_eCvars[HWM_MENU_OPEN_AFTER], "Toggle_Equip_PlayerCheck", id)
+					else
+						Toggle_Equip_PlayerCheck(id)
+				}
 
 				set_task_ex(1.0, "UTIL_CheckPlayer_Menu", id + TASKID_REOPEN_MENU, .flags = SetTask_Repeat)
 			}
