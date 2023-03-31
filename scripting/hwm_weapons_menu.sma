@@ -29,7 +29,9 @@ new const g_szConfig_FileName[] = "Huehue_Weapons_Configuration"
 enum Sections:eSections
 {
 	SECTION_PRIMARY,
-	SECTION_SECONDARY
+	SECTION_SECONDARY,
+	SECTION_BOT_PRIMARY,
+	SECTION_BOT_SECONDARY
 }
 
 new Array:g_aWeapons_Short[eSections], Array:g_aWeapons_Menu[eSections], Array:g_aWeapons_Price[eSections], Array:g_aWeapons_VipFlag[eSections],
@@ -93,15 +95,25 @@ enum _:eRGBA
 
 new g_eProtectionColors[eTeamColors][eRGBA]
 
-const TASKID_DESTROY_MENU = 1914104
+const TASKID_DESTROY_MENU = 1914105
+const TASKID_REOPEN_MENU = 1914106
 
 const ARRAY_SIZE = 64
 
 new bool:g_bFirstLoad
 
+enum _:eMenuID
+{
+	EQUIP_ID,
+	CHOOSE_ID,
+	PRIMARY_ID,
+	SECONDARY_ID
+}
+new g_iMenuIDs[eMenuID]
+
 public plugin_init()
 {
-	register_plugin("[HWM] Huehue Weapon Menu", "1.0.4", "Huehue @ AMXX-BG.INFO")
+	register_plugin("[HWM] Huehue Weapon Menu", "1.0.5", "Huehue @ AMXX-BG.INFO")
 
 	register_dictionary("hwm.txt")
 	
@@ -247,7 +259,7 @@ AutoConfigInit()
 
 public plugin_precache()
 {
-	for (new iSection = _:SECTION_PRIMARY; iSection <= _:SECTION_SECONDARY; iSection++)
+	for (new iSection = _:SECTION_PRIMARY; iSection <= _:SECTION_BOT_SECONDARY; iSection++)
 	{
 		g_aWeapons_Short[Sections:iSection] = ArrayCreate(ARRAY_SIZE, ARRAY_SIZE)
 		g_aWeapons_Menu[Sections:iSection] = ArrayCreate(ARRAY_SIZE, ARRAY_SIZE)
@@ -295,17 +307,19 @@ public CBasePlayer_Spawn(id)
 					set_task(g_eCvars[HWM_MENU_OPEN_AFTER], "Toggle_Equip_PlayerCheck", id)
 				else
 					Toggle_Equip_PlayerCheck(id)
+
+				set_task_ex(1.0, "UTIL_CheckPlayer_Menu", id + TASKID_REOPEN_MENU, .flags = SetTask_Repeat)
 			}
 
 			if (is_user_bot(id) && g_eCvars[HWM_GIVE_WEAPONS_TO_BOTS])
 			{
 				static szWeaponShort[eWeaponType][MAX_NAME_LENGTH], iWeapon[eWeaponType], iArraySize[eSections], iRandomWeaponID[eWeaponType], i
 
-				iArraySize[SECTION_PRIMARY] = ArraySize(Array:g_aWeapons_Short[SECTION_PRIMARY])
-				iArraySize[SECTION_SECONDARY] = ArraySize(Array:g_aWeapons_Short[SECTION_SECONDARY])
+				iArraySize[SECTION_BOT_PRIMARY] = ArraySize(Array:g_aWeapons_Short[SECTION_BOT_PRIMARY])
+				iArraySize[SECTION_BOT_SECONDARY] = ArraySize(Array:g_aWeapons_Short[SECTION_BOT_SECONDARY])
 
-				iRandomWeaponID[PRIMARY] = random_num(0, iArraySize[SECTION_PRIMARY] - 1)
-				iRandomWeaponID[SECONDARY] = random_num(0, iArraySize[SECTION_SECONDARY] - 1)
+				iRandomWeaponID[PRIMARY] = random_num(0, iArraySize[SECTION_BOT_PRIMARY] - 1)
+				iRandomWeaponID[SECONDARY] = random_num(0, iArraySize[SECTION_BOT_SECONDARY] - 1)
 
 				iWeapon[PRIMARY] = iRandomWeaponID[PRIMARY]
 
@@ -314,7 +328,7 @@ public CBasePlayer_Spawn(id)
 				{
 					iRandomWeaponID[PRIMARY]++
 
-					if (iRandomWeaponID[PRIMARY] >= iArraySize[SECTION_PRIMARY])
+					if (iRandomWeaponID[PRIMARY] >= iArraySize[SECTION_BOT_PRIMARY])
 						iRandomWeaponID[PRIMARY] = 0
 
 					iWeapon[PRIMARY] = iRandomWeaponID[PRIMARY]
@@ -327,7 +341,7 @@ public CBasePlayer_Spawn(id)
 				{
 					iRandomWeaponID[SECONDARY]++
 
-					if (iRandomWeaponID[SECONDARY] >= iArraySize[SECTION_SECONDARY])
+					if (iRandomWeaponID[SECONDARY] >= iArraySize[SECTION_BOT_SECONDARY])
 						iRandomWeaponID[SECONDARY] = 0
 
 					iWeapon[SECONDARY] = iRandomWeaponID[SECONDARY]
@@ -337,13 +351,31 @@ public CBasePlayer_Spawn(id)
 				g_iWeapons[id][PRIMARY] = iRandomWeaponID[PRIMARY]
 				g_iWeapons[id][SECONDARY] = iRandomWeaponID[SECONDARY]
 
-				ArrayGetString(Array:g_aWeapons_Short[SECTION_PRIMARY], g_iWeapons[id][PRIMARY], szWeaponShort[PRIMARY], charsmax(szWeaponShort[]))
-				ArrayGetString(Array:g_aWeapons_Short[SECTION_SECONDARY], g_iWeapons[id][SECONDARY], szWeaponShort[SECONDARY], charsmax(szWeaponShort[]))
+				ArrayGetString(Array:g_aWeapons_Short[SECTION_BOT_PRIMARY], g_iWeapons[id][PRIMARY], szWeaponShort[PRIMARY], charsmax(szWeaponShort[]))
+				ArrayGetString(Array:g_aWeapons_Short[SECTION_BOT_SECONDARY], g_iWeapons[id][SECONDARY], szWeaponShort[SECONDARY], charsmax(szWeaponShort[]))
 
 				rg_give_item_ex(id, szWeaponShort[PRIMARY], GT_APPEND, -1, -1)
 				rg_give_item_ex(id, szWeaponShort[SECONDARY], GT_APPEND, -1, -1)
 			}
 		}
+	}
+}
+
+public UTIL_CheckPlayer_Menu(id)
+{
+	id -= TASKID_REOPEN_MENU
+
+	if (is_in_menu(id) && !is_weapons_menu(id))
+	{
+		if (task_exists(id + TASKID_DESTROY_MENU))
+			remove_task(id + TASKID_DESTROY_MENU)
+
+		return
+	}
+
+	if (!g_bWeaponsPicked[id] && !is_in_menu(id))
+	{
+		Toggle_Equip_PlayerCheck(id)
 	}
 }
 
@@ -407,6 +439,9 @@ public CBasePlayerWeapon_DefaultDeploy(const iItem, szViewModel[], szWeaponModel
 	new WeaponIdType:w_iId
 	id = get_member(iItem, m_pPlayer)
 	pActiveItem = get_member(id, m_pActiveItem)
+
+	if (is_user_bot(id))
+		return HC_CONTINUE
 
 	if (!is_nullent(pActiveItem))
 	{
@@ -561,6 +596,8 @@ public Weapons_Command(id)
 
 		rg_remove_all_items(id, false)
 
+		g_bWeaponsPicked[id] = false
+
 		Toggle_Equip_PlayerCheck(id)
 	}
 	return PLUGIN_HANDLED
@@ -597,14 +634,14 @@ Show_Equip_Menu(id)
 	if (g_iMenuUsedTimes[id] > g_eCvars[HWM_MENU_USES_PER_ROUND] || !is_user_alive(id))
 		return
 
-	new iMenu = menu_create(fmt("%s %L", g_eCvars[HWM_MENU_PREFIX], id, "HWM_EQUIP_MENU_TITLE"), "ChooseMenu_Handler")
+	g_iMenuIDs[EQUIP_ID] = menu_create(fmt("%s %L", g_eCvars[HWM_MENU_PREFIX], id, "HWM_EQUIP_MENU_TITLE"), "ChooseMenu_Handler")
 	new iMenuCallBack = menu_makecallback("MainMenu_CallBack")
 
 	static szWeaponMenuName[eWeaponType][MAX_NAME_LENGTH], p_iId, s_iId, szTempWeaponName[eWeaponType][MAX_NAME_LENGTH]
 	p_iId = g_iWeapons[id][PRIMARY]
 	s_iId = g_iWeapons[id][SECONDARY]
 
-	menu_additem(iMenu, fmt("%L", id, "HWM_NEW_WEAPONS"))
+	menu_additem(g_iMenuIDs[EQUIP_ID], fmt("%L", id, "HWM_NEW_WEAPONS"))
 
 	if (p_iId != -1 && s_iId != -1)
 	{
@@ -617,23 +654,23 @@ Show_Equip_Menu(id)
 		replace_menu_chars(szTempWeaponName[PRIMARY])
 		replace_menu_chars(szTempWeaponName[SECONDARY])
 
-		menu_additem(iMenu, fmt("%L", id, "HWM_PREVIOUS_WEAPONS_SELECTED", szTempWeaponName[PRIMARY], szTempWeaponName[SECONDARY]), .callback = iMenuCallBack)
+		menu_additem(g_iMenuIDs[EQUIP_ID], fmt("%L", id, "HWM_PREVIOUS_WEAPONS_SELECTED", szTempWeaponName[PRIMARY], szTempWeaponName[SECONDARY]), .callback = iMenuCallBack)
 	}
 	else
 	{
-		menu_additem(iMenu, fmt("%L", id, "HWM_PREVIOUS_WEAPONS_NOT_SELECTED"), .callback = iMenuCallBack)
+		menu_additem(g_iMenuIDs[EQUIP_ID], fmt("%L", id, "HWM_PREVIOUS_WEAPONS_NOT_SELECTED"), .callback = iMenuCallBack)
 	}
 
-	menu_additem(iMenu, fmt("%L", id, "HWM_DONT_SHOW_AGAIN_SELECTED"), .callback = iMenuCallBack)
+	menu_additem(g_iMenuIDs[EQUIP_ID], fmt("%L", id, "HWM_DONT_SHOW_AGAIN_SELECTED"), .callback = iMenuCallBack)
 
-	menu_setprop(iMenu, MPROP_NUMBER_COLOR, g_eCvars[HWM_MENU_COLOR_NUMBERS])
+	menu_setprop(g_iMenuIDs[EQUIP_ID], MPROP_NUMBER_COLOR, g_eCvars[HWM_MENU_COLOR_NUMBERS])
 
 	if (!g_eCvars[HWM_MENU_CLOSE_OPTION])
-		menu_setprop(iMenu, MPROP_EXIT, MEXIT_NEVER)
+		menu_setprop(g_iMenuIDs[EQUIP_ID], MPROP_EXIT, MEXIT_NEVER)
 	
 	if (g_eCvars[HWM_MENU_CLOSE_AFTER] > 0.0)
 	{
-		menu_display(id, iMenu, 0, floatround(g_eCvars[HWM_MENU_CLOSE_AFTER]))
+		menu_display(id, g_iMenuIDs[EQUIP_ID], 0, floatround(g_eCvars[HWM_MENU_CLOSE_AFTER]))
 
 		if (task_exists(id + TASKID_DESTROY_MENU))	
 			change_task(id + TASKID_DESTROY_MENU, g_eCvars[HWM_MENU_CLOSE_AFTER])
@@ -641,7 +678,7 @@ Show_Equip_Menu(id)
 			set_task(g_eCvars[HWM_MENU_CLOSE_AFTER], "DestroyMenu", id + TASKID_DESTROY_MENU)
 	}
 	else
-		menu_display(id, iMenu)
+		menu_display(id, g_iMenuIDs[EQUIP_ID])
 }
 
 public MainMenu_CallBack(id, iMenu, Item)
@@ -688,7 +725,7 @@ ShowWeaponsMenu(id)
 	if (g_iMenuUsedTimes[id] > g_eCvars[HWM_MENU_USES_PER_ROUND] || !is_user_alive(id))
 		return
 
-	new iMenu = menu_create(fmt("%s %L", g_eCvars[HWM_MENU_PREFIX], id, "HWM_CHOOSE_YOUR_WEAPONS_TITLE"), "WeaponsHandler")
+	g_iMenuIDs[CHOOSE_ID] = menu_create(fmt("%s %L", g_eCvars[HWM_MENU_PREFIX], id, "HWM_CHOOSE_YOUR_WEAPONS_TITLE"), "WeaponsHandler")
 
 	static szWeaponMenuName[eWeaponType][MAX_NAME_LENGTH], p_iId, s_iId, szTempWeaponName[eWeaponType][MAX_NAME_LENGTH]
 	p_iId = g_iWeapons[id][PRIMARY]
@@ -705,8 +742,8 @@ ShowWeaponsMenu(id)
 		replace_menu_chars(szTempWeaponName[PRIMARY])
 		replace_menu_chars(szTempWeaponName[SECONDARY])
 	
-		menu_additem(iMenu, fmt("%L", id, "HWM_PRIMARY_WEAPON_SELECTED", szTempWeaponName[PRIMARY]))
-		menu_additem(iMenu, fmt("%L", id, "HWM_SECONDARY_WEAPON_SELECTED", szTempWeaponName[SECONDARY]))
+		menu_additem(g_iMenuIDs[CHOOSE_ID], fmt("%L", id, "HWM_PRIMARY_WEAPON_SELECTED", szTempWeaponName[PRIMARY]))
+		menu_additem(g_iMenuIDs[CHOOSE_ID], fmt("%L", id, "HWM_SECONDARY_WEAPON_SELECTED", szTempWeaponName[SECONDARY]))
 	}
 	else if (p_iId != -1 && s_iId == -1)
 	{
@@ -716,8 +753,8 @@ ShowWeaponsMenu(id)
 		copy(szTempWeaponName[PRIMARY], charsmax(szTempWeaponName[]), szWeaponMenuName[PRIMARY])
 		replace_menu_chars(szTempWeaponName[PRIMARY])
 
-		menu_additem(iMenu, fmt("%L", id, "HWM_PRIMARY_WEAPON_SELECTED", szTempWeaponName[PRIMARY]))
-		menu_additem(iMenu, fmt("%L", id, "HWM_SECONDARY_WEAPON_NOT_SELECTED"))
+		menu_additem(g_iMenuIDs[CHOOSE_ID], fmt("%L", id, "HWM_PRIMARY_WEAPON_SELECTED", szTempWeaponName[PRIMARY]))
+		menu_additem(g_iMenuIDs[CHOOSE_ID], fmt("%L", id, "HWM_SECONDARY_WEAPON_NOT_SELECTED"))
 	}
 	else if (p_iId == -1 && s_iId != -1)
 	{
@@ -727,23 +764,23 @@ ShowWeaponsMenu(id)
 		copy(szTempWeaponName[SECONDARY], charsmax(szTempWeaponName[]), szWeaponMenuName[SECONDARY])
 		replace_menu_chars(szTempWeaponName[SECONDARY])
 
-		menu_additem(iMenu, fmt("%L", id, "HWM_PRIMARY_WEAPON_NOT_SELECTED"))
-		menu_additem(iMenu, fmt("%L", id, "HWM_SECONDARY_WEAPON_SELECTED", szTempWeaponName[SECONDARY]))
+		menu_additem(g_iMenuIDs[CHOOSE_ID], fmt("%L", id, "HWM_PRIMARY_WEAPON_NOT_SELECTED"))
+		menu_additem(g_iMenuIDs[CHOOSE_ID], fmt("%L", id, "HWM_SECONDARY_WEAPON_SELECTED", szTempWeaponName[SECONDARY]))
 	}
 	else if (p_iId == -1 && s_iId == -1)
 	{
-		menu_additem(iMenu, fmt("%L", id, "HWM_PRIMARY_WEAPON_NOT_SELECTED"))
-		menu_additem(iMenu, fmt("%L", id, "HWM_SECONDARY_WEAPON_NOT_SELECTED"))
+		menu_additem(g_iMenuIDs[CHOOSE_ID], fmt("%L", id, "HWM_PRIMARY_WEAPON_NOT_SELECTED"))
+		menu_additem(g_iMenuIDs[CHOOSE_ID], fmt("%L", id, "HWM_SECONDARY_WEAPON_NOT_SELECTED"))
 	}
 
-	menu_setprop(iMenu, MPROP_NUMBER_COLOR, g_eCvars[HWM_MENU_COLOR_NUMBERS])
+	menu_setprop(g_iMenuIDs[CHOOSE_ID], MPROP_NUMBER_COLOR, g_eCvars[HWM_MENU_COLOR_NUMBERS])
 	
 	if (!g_eCvars[HWM_MENU_CLOSE_OPTION])
-		menu_setprop(iMenu, MPROP_EXIT, MEXIT_NEVER)
+		menu_setprop(g_iMenuIDs[CHOOSE_ID], MPROP_EXIT, MEXIT_NEVER)
 	
 	if (g_eCvars[HWM_MENU_CLOSE_AFTER] > 0.0)
 	{
-		menu_display(id, iMenu, 0, floatround(g_eCvars[HWM_MENU_CLOSE_AFTER]))
+		menu_display(id, g_iMenuIDs[CHOOSE_ID], 0, floatround(g_eCvars[HWM_MENU_CLOSE_AFTER]))
 
 		if (task_exists(id + TASKID_DESTROY_MENU))	
 			change_task(id + TASKID_DESTROY_MENU, g_eCvars[HWM_MENU_CLOSE_AFTER])
@@ -751,7 +788,7 @@ ShowWeaponsMenu(id)
 			set_task(g_eCvars[HWM_MENU_CLOSE_AFTER], "DestroyMenu", id + TASKID_DESTROY_MENU)
 	}
 	else
-		menu_display(id, iMenu)
+		menu_display(id, g_iMenuIDs[CHOOSE_ID])
 }
 
 public DestroyMenu(id)
@@ -783,7 +820,7 @@ public WeaponsHandler(id, iMenu, Item)
 
 ShowPrimaryWeapons(id)
 {
-	new iMenu = menu_create(fmt("%s %L", g_eCvars[HWM_MENU_PREFIX], id, "HWM_PRIMARY_WEAPON_TITLE"), "PrimaryHandler")
+	g_iMenuIDs[PRIMARY_ID] = menu_create(fmt("%s %L", g_eCvars[HWM_MENU_PREFIX], id, "HWM_PRIMARY_WEAPON_TITLE"), "PrimaryHandler")
 
 	static iWeaponPrice, szWeaponMenuName[MAX_NAME_LENGTH]
 
@@ -793,17 +830,17 @@ ShowPrimaryWeapons(id)
 		ArrayGetString(Array:g_aWeapons_Menu[SECTION_PRIMARY], i, szWeaponMenuName, charsmax(szWeaponMenuName))
 
 		if (iWeaponPrice > 0 && !is_user_flagged(id, i, SECTION_PRIMARY))
-			menu_additem(iMenu, fmt("%L", id, "HWM_PRIMARY_WEAPON_PRICE_MENU", szWeaponMenuName, is_user_vip(id) ? discount_math_fix(iWeaponPrice, g_eCvars[HWM_VIP_DISCOUNT]) : iWeaponPrice))
+			menu_additem(g_iMenuIDs[PRIMARY_ID], fmt("%L", id, "HWM_PRIMARY_WEAPON_PRICE_MENU", szWeaponMenuName, is_user_vip(id) ? discount_math_fix(iWeaponPrice, g_eCvars[HWM_VIP_DISCOUNT]) : iWeaponPrice))
 		else if (is_user_flagged(id, i, SECTION_PRIMARY) || iWeaponPrice == 0)
-			menu_additem(iMenu, szWeaponMenuName)
+			menu_additem(g_iMenuIDs[PRIMARY_ID], szWeaponMenuName)
 	}
 
-	menu_setprop(iMenu, MPROP_NUMBER_COLOR, g_eCvars[HWM_MENU_COLOR_NUMBERS])
+	menu_setprop(g_iMenuIDs[PRIMARY_ID], MPROP_NUMBER_COLOR, g_eCvars[HWM_MENU_COLOR_NUMBERS])
 
 	if (!g_eCvars[HWM_MENU_CLOSE_OPTION])
-		menu_setprop(iMenu, MPROP_EXIT, MEXIT_NEVER)
+		menu_setprop(g_iMenuIDs[PRIMARY_ID], MPROP_EXIT, MEXIT_NEVER)
 	
-	menu_display(id, iMenu)
+	menu_display(id, g_iMenuIDs[PRIMARY_ID])
 }
 
 public PrimaryHandler(id, iMenu, Item)
@@ -871,7 +908,7 @@ public PrimaryHandler(id, iMenu, Item)
 
 ShowSecondaryWeapons(id)
 {
-	new iMenu = menu_create(fmt("%s %L", g_eCvars[HWM_MENU_PREFIX], id, "HWM_SECONDARY_WEAPON_TITLE"), "SecondaryHandler")
+	g_iMenuIDs[SECONDARY_ID] = menu_create(fmt("%s %L", g_eCvars[HWM_MENU_PREFIX], id, "HWM_SECONDARY_WEAPON_TITLE"), "SecondaryHandler")
 	
 	static iWeaponPrice, szWeaponMenuName[MAX_NAME_LENGTH]
 
@@ -881,17 +918,17 @@ ShowSecondaryWeapons(id)
 		ArrayGetString(Array:g_aWeapons_Menu[SECTION_SECONDARY], i, szWeaponMenuName, charsmax(szWeaponMenuName))
 
 		if (iWeaponPrice > 0 && !is_user_flagged(id, i, SECTION_SECONDARY))
-			menu_additem(iMenu, fmt("%L", id, "HWM_SECONDARY_WEAPON_PRICE_MENU", szWeaponMenuName, is_user_vip(id) ? discount_math_fix(iWeaponPrice, g_eCvars[HWM_VIP_DISCOUNT]) : iWeaponPrice))
+			menu_additem(g_iMenuIDs[SECONDARY_ID], fmt("%L", id, "HWM_SECONDARY_WEAPON_PRICE_MENU", szWeaponMenuName, is_user_vip(id) ? discount_math_fix(iWeaponPrice, g_eCvars[HWM_VIP_DISCOUNT]) : iWeaponPrice))
 		else if (is_user_flagged(id, i, SECTION_SECONDARY) || iWeaponPrice == 0)
-			menu_additem(iMenu, szWeaponMenuName)
+			menu_additem(g_iMenuIDs[SECONDARY_ID], szWeaponMenuName)
 	}
 
-	menu_setprop(iMenu, MPROP_NUMBER_COLOR, g_eCvars[HWM_MENU_COLOR_NUMBERS])
+	menu_setprop(g_iMenuIDs[SECONDARY_ID], MPROP_NUMBER_COLOR, g_eCvars[HWM_MENU_COLOR_NUMBERS])
 
 	if (!g_eCvars[HWM_MENU_CLOSE_OPTION])
-		menu_setprop(iMenu, MPROP_EXIT, MEXIT_NEVER)
+		menu_setprop(g_iMenuIDs[SECONDARY_ID], MPROP_EXIT, MEXIT_NEVER)
 
-	menu_display(id, iMenu)
+	menu_display(id, g_iMenuIDs[SECONDARY_ID])
 }
 
 public SecondaryHandler(id, iMenu, Item)
@@ -978,7 +1015,7 @@ UTIL_Load_Weapons_File(bool:bReloadFile)
 										; flag ('d' example) -> Admin/VIP with flag 'd' receives weapon for free ^n\
 										; Example: ^n\
 										; ^"awp^" ^"AWP Magnum^" 4750 ^"d^" ^"models/ex_folder/v_awp.mdl^" ^"models/ex_folder/p_awp.mdl^" -> Players with flag 'd' will get it for free, other members like VIP will get it -% discount price setted by cvar & normal players will pay 4750 ^n^n\
-										[PRIMARY] ^n\
+										[PRIMARY]^n\
 										^"m4a1^" ^"\w[\yM4A1\w]^" 0 ^"free^" ^"default^" ^"default^"^n\
 										^"ak47^" ^"\w[\yAK47\w]^" 0 ^"free^" ^"default^" ^"default^" ^n\
 										^"aug^" ^"AUG^" 0 ^"free^" ^"default^" ^"default^"^n\
@@ -990,20 +1027,24 @@ UTIL_Load_Weapons_File(bool:bReloadFile)
 										^"sg550^" ^"SG550^" 4200 ^"b^" ^"default^" ^"default^"^n\
 										^"m249^" ^"M249^" 5750 ^"a^" ^"default^" ^"default^"^n\
 										^"g3sg1^" ^"G3SG1^" 5000 ^"c^" ^"default^" ^"default^"^n\
-										^"ump45^" ^"UMP 45^" 0 ^"free^" ^"default^" ^"default^"^n\
-										^"mp5navy^" ^"MP5Navy^" 0 ^"free^" ^"default^" ^"default^"^n\
-										^"m3^" ^"M3^" 0 ^"free^" ^"default^" ^"default^"^n\
-										^"xm1014^" ^"XM1014^" 0 ^"free^" ^"default^" ^"default^"^n\
-										^"tmp^" ^"TMP^" 0 ^"free^" ^"default^" ^"default^"^n\
-										^"mac10^" ^"Mac10^" 0 ^"free^" ^"default^" ^"default^"^n\
 										^"p90^" ^"P90^" 0 ^"free^" ^"default^" ^"default^"^n^n\
-										[SECONDARY] ^n\
+										[SECONDARY]^n\
 										^"glock18^" ^"Glock 18^" 0 ^"free^" ^"default^" ^"default^"^n\
 										^"usp^" ^"USP^" 0 ^"free^" ^"default^" ^"default^"^n\
 										^"p228^" ^"P228^" 0 ^"free^" ^"default^" ^"default^"^n\
 										^"deagle^" ^"\w[\yDeagle\w]^" 0 ^"free^" ^"default^" ^"default^"^n\
 										^"fiveseven^" ^"FiveSeven^" 0 ^"free^" ^"default^" ^"default^"^n\
-										^"elite^" ^"Elite Dual Batteras^" 0 ^"free^" ^"default^" ^"default^"")
+										^"elite^" ^"Elite Dual Batteras^" 0 ^"free^" ^"default^" ^"default^"^n^n\
+										[BOT PRIMARY]^n\
+										^"ak47^"^n\
+										^"m4a1^"^n\
+										^"galil^"^n\
+										^"famas^"^n^n\
+										[BOT SECONDARY]^n\
+										^"glock18^"^n\
+										^"usp^"^n\
+										^"p228^"^n\
+										^"deagle^"")
 			fputs(iFilePointer, szFileDetails)
 		}
 		fclose(iFilePointer)
@@ -1030,10 +1071,14 @@ UTIL_Load_Weapons_File(bool:bReloadFile)
 			{
 				if (szData[strlen(szData) - 1] == ']')
 				{
-					if (containi(szData, "primary") != -1)
+					if (containi(szData, "primary") != -1 && containi(szData, "bot") == -1)
 						iSection = SECTION_PRIMARY
-					else if (containi(szData, "secondary") != -1)
+					else if (containi(szData, "secondary") != -1 && containi(szData, "bot") == -1)
 						iSection = SECTION_SECONDARY
+					else if (containi(szData, "bot primary") != -1)
+						iSection = SECTION_BOT_PRIMARY
+					else if (containi(szData, "bot secondary") != -1)
+						iSection = SECTION_BOT_SECONDARY
 				}
 				else
 					continue
@@ -1041,7 +1086,7 @@ UTIL_Load_Weapons_File(bool:bReloadFile)
 			default:
 			{
 				parse(szData, szWeaponShort, charsmax(szWeaponShort), szWeaponMenuName, charsmax(szWeaponMenuName), szPrice, charsmax(szPrice), szVipFlag, charsmax(szVipFlag),
-						szViewSkin, charsmax(szViewSkin), szPlayerSkin, charsmax(szPlayerSkin))
+					szViewSkin, charsmax(szViewSkin), szPlayerSkin, charsmax(szPlayerSkin))
 
 				ArrayPushString(g_aWeapons_Short[iSection], fmt("weapon_%s", szWeaponShort))
 				ArrayPushString(g_aWeapons_Menu[iSection], szWeaponMenuName)
@@ -1263,4 +1308,26 @@ stock client_print_color_ex(const pPlayer, const szInputMessage[], any:...)
 	new iLen = formatex(szMessage, charsmax(szMessage), "%s ", g_eCvars[HWM_CHAT_PREFIX])
 	vformat(szMessage[iLen], charsmax(szMessage) - iLen, szInputMessage, 3)
 	client_print_color(pPlayer, print_team_default, szMessage)
+}
+
+stock is_in_menu(id)
+{
+	new iMenu, iNewMenu
+	new bIsMenuActive = player_menu_info(id, iMenu, iNewMenu)
+
+	if (bIsMenuActive || iMenu)
+		return true
+
+	return false
+}
+
+stock is_weapons_menu(id)
+{
+	new iMenu, iNewMenu
+	player_menu_info(id, iMenu, iNewMenu)
+
+	if (g_iMenuIDs[EQUIP_ID] <= iNewMenu <= g_iMenuIDs[SECONDARY_ID])
+		return true
+
+	return false
 }
