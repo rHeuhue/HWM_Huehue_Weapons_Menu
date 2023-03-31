@@ -39,6 +39,7 @@ new Array:g_aWeapons_Short[eSections], Array:g_aWeapons_Menu[eSections], Array:g
 
 new g_iWeapons[MAX_CLIENTS + 1][eWeaponType], g_iMenuUsedTimes[MAX_CLIENTS + 1]
 new bool:g_bChoiceSaved[MAX_CLIENTS + 1], bool:g_bWeaponsPicked[MAX_CLIENTS + 1]
+new bool:g_bMenuClosedByPlayer[MAX_CLIENTS + 1]
 
 enum _:WMCvars
 {
@@ -47,8 +48,9 @@ enum _:WMCvars
 	HWM_MENU_CLOSE_OPTION,
 	HWM_MENU_USES_PER_ROUND,
 	Float:HWM_MENU_OPEN_AFTER,
-	HWM_WHICH_TEAM_CAN_USE_MENU[12],
 	Float:HWM_MENU_CLOSE_AFTER,
+	HWM_MENU_WARMUP,
+	HWM_WHICH_TEAM_CAN_USE_MENU[12],
 	HWM_WHICH_WEAPON_FIRST[22],
 	HWM_VIP_FLAG[5],
 	HWM_VIP_DISCOUNT[10],
@@ -133,6 +135,8 @@ public plugin_init()
 	bind_pcvar_float(create_cvar("hwm_menu_open_after", "0.5", FCVAR_NONE, "How much seconds delay to open the menu^n0 = Open instantly on spawn", true, 0.0), g_eCvars[HWM_MENU_OPEN_AFTER])
 	bind_pcvar_float(create_cvar("hwm_menu_close_after", "15.0", FCVAR_NONE, "After how many seconds weapons menu will be close"), g_eCvars[HWM_MENU_CLOSE_AFTER])
 
+	bind_pcvar_num(create_cvar("hwm_warmup_round", "1", FCVAR_NONE, "Whether menu will be active or not due to WARM UP Round^n0 = Menu will be active^n1 = Menu will be inactive till next round", true, 0.0, true, 1.0), g_eCvars[HWM_MENU_WARMUP])
+	
 	bind_pcvar_string(create_cvar("hwm_menu_weapon_pick_order_first", "primary", FCVAR_NONE, "Which weapon to choose first^nprimary^nsecondary"), g_eCvars[HWM_WHICH_WEAPON_FIRST], charsmax(g_eCvars[HWM_WHICH_WEAPON_FIRST]))
 
 	bind_pcvar_string(create_cvar("hwm_which_team_can_use_menu", "any", FCVAR_NONE, "Which team can use the menu:^nct = Counter-Terrorists^nt = Terrorists^nany = Both Teams can use it"), g_eCvars[HWM_WHICH_TEAM_CAN_USE_MENU], charsmax(g_eCvars[HWM_WHICH_TEAM_CAN_USE_MENU]))
@@ -294,8 +298,12 @@ public CBasePlayer_Spawn(id)
 {	
 	if (is_user_alive(id))
 	{
+		if (g_eCvars[HWM_MENU_WARMUP])
+			return
+
 		if (g_eCvars[HWM_INFINITE_ROUND] || get_member_game(m_iTotalRoundsPlayed) >= g_eCvars[HWM_MIN_ROUND])
 		{
+			g_bMenuClosedByPlayer[id] = false
 			g_bWeaponsPicked[id] = false
 
 			if (g_eCvars[HWM_INFINITE_ROUND])
@@ -381,6 +389,7 @@ public UTIL_CheckPlayer_Menu(id)
 	{
 		if (task_exists(id + TASKID_REOPEN_MENU))
 			remove_task(id + TASKID_REOPEN_MENU)
+
 		return
 	}
 
@@ -394,6 +403,9 @@ public UTIL_CheckPlayer_Menu(id)
 
 	if (!g_bWeaponsPicked[id] && !is_in_menu(id))
 	{
+		if (g_bMenuClosedByPlayer[id] && g_eCvars[HWM_MENU_CLOSE_OPTION])
+			return
+
 		Toggle_Equip_PlayerCheck(id)
 	}
 }
@@ -440,6 +452,9 @@ public CSGameRules_RestartRound()
 {
 	if (g_eCvars[HWM_INFINITE_ROUND] && get_member_game(m_bCompleteReset))
 	{
+		if (g_eCvars[HWM_MENU_WARMUP])
+			g_eCvars[HWM_MENU_WARMUP] = 0
+
 		set_member_game(m_iTotalRoundsPlayed, get_member_game(m_iTotalRoundsPlayed) + 1)
 	}
 }
@@ -615,6 +630,7 @@ public Weapons_Command(id)
 
 		rg_remove_all_items(id, false)
 
+		g_bMenuClosedByPlayer[id] = false
 		g_bWeaponsPicked[id] = false
 
 		Toggle_Equip_PlayerCheck(id)
@@ -713,7 +729,14 @@ public MainMenu_CallBack(id, iMenu, Item)
 
 public ChooseMenu_Handler(id, iMenu, Item)
 {
-	if (Item == MENU_EXIT || g_iMenuUsedTimes[id] > g_eCvars[HWM_MENU_USES_PER_ROUND] || !is_user_alive(id))
+	if (Item == MENU_EXIT)
+	{
+		if (g_eCvars[HWM_MENU_CLOSE_OPTION])
+			g_bMenuClosedByPlayer[id] = true
+
+		return
+	}
+	else if (g_iMenuUsedTimes[id] > g_eCvars[HWM_MENU_USES_PER_ROUND] || !is_user_alive(id))
 		return
 
 	switch (Item)
@@ -825,7 +848,14 @@ public DestroyMenu(id)
 
 public WeaponsHandler(id, iMenu, Item)
 {
-	if (Item == MENU_EXIT || g_iMenuUsedTimes[id] > g_eCvars[HWM_MENU_USES_PER_ROUND] || !is_user_alive(id))
+	if (Item == MENU_EXIT)
+	{
+		if (g_eCvars[HWM_MENU_CLOSE_OPTION])
+			g_bMenuClosedByPlayer[id] = true
+
+		return
+	}
+	else if (g_iMenuUsedTimes[id] > g_eCvars[HWM_MENU_USES_PER_ROUND] || !is_user_alive(id))
 		return
 	
 	switch (Item)
