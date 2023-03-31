@@ -281,6 +281,15 @@ public client_putinserver(id)
 	g_bWeaponsPicked[id] = false
 }
 
+public client_disconnected(id)
+{
+	if (task_exists(id + TASKID_DESTROY_MENU))
+		remove_task(id + TASKID_DESTROY_MENU)
+
+	if (task_exists(id + TASKID_REOPEN_MENU))
+		remove_task(id + TASKID_REOPEN_MENU)
+}
+
 public CBasePlayer_Spawn(id)
 {	
 	if (is_user_alive(id))
@@ -367,6 +376,13 @@ public CBasePlayer_Spawn(id)
 public UTIL_CheckPlayer_Menu(id)
 {
 	id -= TASKID_REOPEN_MENU
+
+	if (!is_user_connected(id))
+	{
+		if (task_exists(id + TASKID_REOPEN_MENU))
+			remove_task(id + TASKID_REOPEN_MENU)
+		return
+	}
 
 	if (is_in_menu(id) && !is_weapons_menu(id))
 	{
