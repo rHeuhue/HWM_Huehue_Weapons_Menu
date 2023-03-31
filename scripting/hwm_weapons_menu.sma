@@ -135,7 +135,7 @@ public plugin_init()
 	bind_pcvar_float(create_cvar("hwm_menu_open_after", "0.5", FCVAR_NONE, "How much seconds delay to open the menu^n0 = Open instantly on spawn", true, 0.0), g_eCvars[HWM_MENU_OPEN_AFTER])
 	bind_pcvar_float(create_cvar("hwm_menu_close_after", "15.0", FCVAR_NONE, "After how many seconds weapons menu will be close"), g_eCvars[HWM_MENU_CLOSE_AFTER])
 
-	bind_pcvar_num(create_cvar("hwm_warmup_round", "1", FCVAR_NONE, "Whether menu will be active or not due to WARM UP Round^n0 = Menu will be active^n1 = Menu will be inactive till next round", true, 0.0, true, 1.0), g_eCvars[HWM_MENU_WARMUP])
+	bind_pcvar_num(create_cvar("hwm_warmup_round", "0", FCVAR_NONE, "Whether menu will be active or not due to WARM UP Round^n0 = Menu will be active^n1 = Menu will be inactive till next round", true, 0.0, true, 1.0), g_eCvars[HWM_MENU_WARMUP])
 	
 	bind_pcvar_string(create_cvar("hwm_menu_weapon_pick_order_first", "primary", FCVAR_NONE, "Which weapon to choose first^nprimary^nsecondary"), g_eCvars[HWM_WHICH_WEAPON_FIRST], charsmax(g_eCvars[HWM_WHICH_WEAPON_FIRST]))
 
