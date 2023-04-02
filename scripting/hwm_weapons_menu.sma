@@ -170,7 +170,7 @@ public plugin_init()
 	bind_pcvar_num(create_cvar("hwm_remove_buyzone", "1", FCVAR_NONE, "Whether map will have buy zone or not", true, 0.0, true, 1.0), g_eCvars[HWM_REMOVE_BUYZONE])
 
 	bind_pcvar_num(create_cvar("hwm_strip_weapons_on_spawn", "1", FCVAR_NONE, "Remove all weapons from player on spawn", true, 0.0, true, 1.0), g_eCvars[HWM_STRIP_WEAPONS_ON_SPAWN])
-	bind_pcvar_num(create_cvar("hwm_remove_bomb_spawn_player", "0", FCVAR_NONE, "Whether players will spawh with C4[Bomb] or not", true, 0.0, true, 1.0), g_eCvars[HWM_REMOVE_C4_ITEM])
+	bind_pcvar_num(create_cvar("hwm_give_bomb_to_player", "0", FCVAR_NONE, "Whether players will spawh with C4[Bomb] or not", true, 0.0, true, 1.0), g_eCvars[HWM_REMOVE_C4_ITEM])
 	bind_pcvar_num(create_cvar("hwm_allow_weapons_place_on_map", "0", FCVAR_NONE, "Whether weapons placed on map be there or not^nfor example fy_snow.", true, 0.0, true, 1.0), g_eCvars[HWM_REMOVE_WEAPONS_FROM_GROUND])
 	bind_pcvar_num(create_cvar("hwm_items_stay_on_ground", "0", FCVAR_NONE, "Whether weapons will be removed from ground after death^n1 = they will stay^n0 = they will be removed when player is killed", true, 0.0, true, 1.0), g_eCvars[HWM_ITEMS_STAY_ON_GROUND])
 	bind_pcvar_num(create_cvar("hwm_give_weapons_to_bots", "1", FCVAR_NONE, "Give random weapon to bots", true, 0.0, true, 1.0), g_eCvars[HWM_GIVE_WEAPONS_TO_BOTS])
@@ -640,7 +640,7 @@ public Weapons_Command(id)
 
 public Toggle_Equip_PlayerCheck(id)
 {
-	if (!is_user_alive(id))
+	if (!is_user_alive(id) || is_in_menu(id))
 		return PLUGIN_HANDLED
 
 	if (!equal(g_eCvars[HWM_WHICH_TEAM_CAN_USE_MENU], "any") && TEAM_TERRORIST < rg_get_user_team(id) < TEAM_CT
