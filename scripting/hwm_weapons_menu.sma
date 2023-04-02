@@ -37,9 +37,9 @@ enum Sections:eSections
 new Array:g_aWeapons_Short[eSections], Array:g_aWeapons_Menu[eSections], Array:g_aWeapons_Price[eSections], Array:g_aWeapons_VipFlag[eSections],
 	Array:g_aWeapons_ViewSkin[eSections], Array:g_aWeapons_PlayerSkin[eSections]
 
-new g_iWeapons[MAX_CLIENTS + 1][eWeaponType], g_iMenuUsedTimes[MAX_CLIENTS + 1]
-new bool:g_bChoiceSaved[MAX_CLIENTS + 1], bool:g_bWeaponsPicked[MAX_CLIENTS + 1]
-new bool:g_bMenuClosedByPlayer[MAX_CLIENTS + 1]
+new g_iWeapons[MAX_CLIENTS + 1][eWeaponType], g_iMenuUsedTimes[MAX_CLIENTS + 1 char]
+new bool:g_bChoiceSaved[MAX_CLIENTS + 1 char], bool:g_bWeaponsPicked[MAX_CLIENTS + 1 char]
+new bool:g_bMenuClosedByPlayer[MAX_CLIENTS + 1 char]
 
 enum _:WMCvars
 {
@@ -115,7 +115,7 @@ new g_iMenuIDs[eMenuID]
 
 public plugin_init()
 {
-	register_plugin("[HWM] Huehue Weapon Menu", "1.0.5", "Huehue @ AMXX-BG.INFO")
+	register_plugin("[HWM] Huehue Weapon Menu", "1.0.6", "Huehue @ AMXX-BG.INFO")
 
 	register_dictionary("hwm.txt")
 	
@@ -278,11 +278,10 @@ public plugin_precache()
 
 public client_putinserver(id)
 {
-	g_iWeapons[id][PRIMARY] = -1
-	g_iWeapons[id][SECONDARY] = -1
-	g_bChoiceSaved[id] = false
-	g_iMenuUsedTimes[id] = 0
-	g_bWeaponsPicked[id] = false
+	g_iWeapons[id][PRIMARY] = g_iWeapons[id][SECONDARY] = -1
+	g_bChoiceSaved{id} = false
+	g_iMenuUsedTimes{id} = 0
+	g_bWeaponsPicked{id} = false
 }
 
 public client_disconnected(id)
@@ -304,10 +303,10 @@ public CBasePlayer_Spawn(id)
 		if (g_eCvars[HWM_INFINITE_ROUND] || get_member_game(m_iTotalRoundsPlayed) >= g_eCvars[HWM_MIN_ROUND])
 		{
 			g_bMenuClosedByPlayer[id] = false
-			g_bWeaponsPicked[id] = false
+			g_bWeaponsPicked{id} = false
 
 			if (g_eCvars[HWM_INFINITE_ROUND])
-				g_iMenuUsedTimes[id] = 0
+				g_iMenuUsedTimes{id} = 0
 
 			if (g_eCvars[HWM_STRIP_WEAPONS_ON_SPAWN])
 			{
@@ -401,7 +400,7 @@ public UTIL_CheckPlayer_Menu(id)
 		return
 	}
 
-	if (!g_bWeaponsPicked[id] && !is_in_menu(id))
+	if (!g_bWeaponsPicked{id} && !is_in_menu(id))
 	{
 		if (g_bMenuClosedByPlayer[id] && g_eCvars[HWM_MENU_CLOSE_OPTION])
 			return
@@ -461,7 +460,7 @@ public CSGameRules_RestartRound()
 
 public CBasePlayer_RoundRespawn(id)
 {
-	g_iMenuUsedTimes[id] = 0
+	g_iMenuUsedTimes{id} = 0
 }
 
 public CBasePlayerWeapon_DefaultDeploy(const iItem, szViewModel[], szWeaponModel[], iAnim, szAnimExt[], iSkipLocal)
@@ -558,7 +557,7 @@ public Hook_DropCommand(id)
 
 public Weapons_Command(id)
 {
-	if (!g_bChoiceSaved[id] && g_iMenuUsedTimes[id] > g_eCvars[HWM_MENU_USES_PER_ROUND])
+	if (!g_bChoiceSaved{id} && g_iMenuUsedTimes{id} > g_eCvars[HWM_MENU_USES_PER_ROUND])
 	{
 		client_print_color_ex(id, "%L", id, g_eCvars[HWM_INFINITE_ROUND] == 1 ? "HWM_GUNS_ALREADY_ENABLED_RESPAWN" : "HWM_GUNS_ALREADY_ENABLED_ROUND")
 		return PLUGIN_HANDLED
@@ -611,12 +610,12 @@ public Weapons_Command(id)
 			rg_give_user_money(id, iTotalPrice, true)
 		}
 
-		if (g_bChoiceSaved[id])
+		if (g_bChoiceSaved{id})
 		{
-			g_bChoiceSaved[id] = false
+			g_bChoiceSaved{id} = false
 			client_print_color_ex(id, "%L", id, "HWM_RE_ENABLED_WEAPONS_MENU")
 
-			if (g_iMenuUsedTimes[id] > g_eCvars[HWM_MENU_USES_PER_ROUND])
+			if (g_iMenuUsedTimes{id} > g_eCvars[HWM_MENU_USES_PER_ROUND])
 			{
 				client_print_color_ex(id, "%L", id, "HWM_EQUIP_AVAILABLE_ON_NEW_SPAWN")
 				Toggle_Equip_PlayerCheck(id)
@@ -631,7 +630,7 @@ public Weapons_Command(id)
 		rg_remove_all_items(id, false)
 
 		g_bMenuClosedByPlayer[id] = false
-		g_bWeaponsPicked[id] = false
+		g_bWeaponsPicked{id} = false
 
 		Toggle_Equip_PlayerCheck(id)
 	}
@@ -651,13 +650,13 @@ public Toggle_Equip_PlayerCheck(id)
 	if (!rg_has_item_by_name(id, "weapon_knife"))
 		rg_give_item(id, "weapon_knife")
 
-	if (g_bChoiceSaved[id])
+	if (g_bChoiceSaved{id})
 	{
 		give_player_items(id)
 	}
 	else
 	{
-		if (g_iMenuUsedTimes[id] <= g_eCvars[HWM_MENU_USES_PER_ROUND])
+		if (g_iMenuUsedTimes{id} <= g_eCvars[HWM_MENU_USES_PER_ROUND])
 			Show_Equip_Menu(id)
 	}
 	
@@ -666,7 +665,7 @@ public Toggle_Equip_PlayerCheck(id)
 
 Show_Equip_Menu(id)
 {
-	if (g_iMenuUsedTimes[id] > g_eCvars[HWM_MENU_USES_PER_ROUND] || !is_user_alive(id))
+	if (g_iMenuUsedTimes{id} > g_eCvars[HWM_MENU_USES_PER_ROUND] || !is_user_alive(id))
 		return
 
 	g_iMenuIDs[EQUIP_ID] = menu_create(fmt("%s %L", g_eCvars[HWM_MENU_PREFIX], id, "HWM_EQUIP_MENU_TITLE"), "ChooseMenu_Handler")
@@ -736,7 +735,7 @@ public ChooseMenu_Handler(id, iMenu, Item)
 
 		return
 	}
-	else if (g_iMenuUsedTimes[id] > g_eCvars[HWM_MENU_USES_PER_ROUND] || !is_user_alive(id))
+	else if (g_iMenuUsedTimes{id} > g_eCvars[HWM_MENU_USES_PER_ROUND] || !is_user_alive(id))
 		return
 
 	switch (Item)
@@ -754,7 +753,7 @@ public ChooseMenu_Handler(id, iMenu, Item)
 		case 2:
 		{
 			give_player_items(id)
-			g_bChoiceSaved[id] = true
+			g_bChoiceSaved{id} = true
 
 			new const szChatCommands[][] = { "guns", "weapons", "gun", "weapon" }
 			client_print_color_ex(id, "%L", id, "HWM_SAVE_CHOICE_INFO", szChatCommands[random_num(0, sizeof szChatCommands - 1)])
@@ -764,7 +763,7 @@ public ChooseMenu_Handler(id, iMenu, Item)
 
 ShowWeaponsMenu(id)
 {
-	if (g_iMenuUsedTimes[id] > g_eCvars[HWM_MENU_USES_PER_ROUND] || !is_user_alive(id))
+	if (g_iMenuUsedTimes{id} > g_eCvars[HWM_MENU_USES_PER_ROUND] || !is_user_alive(id))
 		return
 
 	g_iMenuIDs[CHOOSE_ID] = menu_create(fmt("%s %L", g_eCvars[HWM_MENU_PREFIX], id, "HWM_CHOOSE_YOUR_WEAPONS_TITLE"), "WeaponsHandler")
@@ -855,7 +854,7 @@ public WeaponsHandler(id, iMenu, Item)
 
 		return
 	}
-	else if (g_iMenuUsedTimes[id] > g_eCvars[HWM_MENU_USES_PER_ROUND] || !is_user_alive(id))
+	else if (g_iMenuUsedTimes{id} > g_eCvars[HWM_MENU_USES_PER_ROUND] || !is_user_alive(id))
 		return
 	
 	switch (Item)
@@ -1214,9 +1213,9 @@ stock give_player_items(id)
 				change_task(id + TASKID_DESTROY_MENU, g_eCvars[HWM_MENU_CLOSE_AFTER])
 			}
 
-			if (g_bChoiceSaved[id])
+			if (g_bChoiceSaved{id})
 			{
-				g_bChoiceSaved[id] = false
+				g_bChoiceSaved{id} = false
 				Show_Equip_Menu(id)
 				return
 			}
@@ -1259,8 +1258,8 @@ stock give_player_items(id)
 		rg_set_user_nvg(id, true)
 	}
 	
-	g_iMenuUsedTimes[id]++
-	g_bWeaponsPicked[id] = true
+	g_iMenuUsedTimes{id}++
+	g_bWeaponsPicked{id} = true
 
 	if (task_exists(id + TASKID_DESTROY_MENU))
 		remove_task(id + TASKID_DESTROY_MENU)
