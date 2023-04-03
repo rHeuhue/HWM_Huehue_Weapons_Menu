@@ -1,7 +1,7 @@
 #include <amxmodx>
 #include <amxmisc>
 #include <reapi_stocks>
-
+#include <hamsandwich>
 
 enum eWeaponType
 {
@@ -40,6 +40,15 @@ new Array:g_aWeapons_Short[eSections], Array:g_aWeapons_Menu[eSections], Array:g
 new g_iWeapons[MAX_CLIENTS + 1][eWeaponType], g_iMenuUsedTimes[MAX_CLIENTS + 1 char]
 new bool:g_bChoiceSaved[MAX_CLIENTS + 1 char], bool:g_bWeaponsPicked[MAX_CLIENTS + 1 char]
 new bool:g_bMenuClosedByPlayer[MAX_CLIENTS + 1 char]
+
+enum _:eWeaponDataSave
+{
+	M4A1_Silencer = 4,
+	USP_Silencer = 1,
+	GLOCK_BurstFire = 2,
+	FAMAS_BurstFire = 16
+}
+new bool:g_bWeaponDataSave[eWeaponDataSave][MAX_CLIENTS + 1]
 
 enum _:WMCvars
 {
@@ -97,8 +106,8 @@ enum _:eRGBA
 
 new g_eProtectionColors[eTeamColors][eRGBA]
 
-const TASKID_DESTROY_MENU = 1914105
-const TASKID_REOPEN_MENU = 1914106
+const TASKID_DESTROY_MENU = 1914107
+const TASKID_REOPEN_MENU = 1914108
 
 const ARRAY_SIZE = 64
 
@@ -115,7 +124,7 @@ new g_iMenuIDs[eMenuID]
 
 public plugin_init()
 {
-	register_plugin("[HWM] Huehue Weapon Menu", "1.0.6", "Huehue @ AMXX-BG.INFO")
+	register_plugin("[HWM] Huehue Weapon Menu", "1.0.7", "Huehue @ AMXX-BG.INFO")
 
 	register_dictionary("hwm.txt")
 	
@@ -190,6 +199,12 @@ public plugin_init()
 
 	RegisterHookChain(RG_CBasePlayer_SetSpawnProtection, "CBasePlayer_SetSpawnProtection", false) // pre func
 	RegisterHookChain(RG_CBasePlayer_RemoveSpawnProtection, "CBasePlayer_RemoveSpawnProtection", false) // pre func
+
+	RegisterHookChain(RG_CBasePlayer_AddPlayerItem, "CBasePlayer_AddPlayerItem", false) // pre func
+
+	new const g_szWeapons_WithSecondaryAttacks[][] = { "weapon_m4a1", "weapon_usp", "weapon_glock18", "weapon_famas" }
+	for (new i = 0; i < sizeof g_szWeapons_WithSecondaryAttacks; i++)
+		RegisterHam(Ham_Weapon_SecondaryAttack, g_szWeapons_WithSecondaryAttacks[i], "CBasePlayer_Ham_Weapon_SecondaryAttack", true) // post func
 
 	g_bFirstLoad = false
 
@@ -282,6 +297,7 @@ public client_putinserver(id)
 	g_bChoiceSaved{id} = false
 	g_iMenuUsedTimes{id} = 0
 	g_bWeaponsPicked{id} = false
+	g_bWeaponDataSave[M4A1_Silencer]{id} = g_bWeaponDataSave[USP_Silencer]{id} = g_bWeaponDataSave[GLOCK_BurstFire]{id} = g_bWeaponDataSave[FAMAS_BurstFire]{id} = false
 }
 
 public client_disconnected(id)
@@ -483,6 +499,19 @@ public CBasePlayerWeapon_DefaultDeploy(const iItem, szViewModel[], szWeaponModel
 			return HC_CONTINUE
 	}
 
+	/*
+	// Not so good case since player is able to not detect weapon state change if weapons not swap!!
+	// Not recommended to use
+	switch (rg_get_user_active_weapon(id))
+	{
+		case WEAPON_M4A1: if (get_member(iItem, m_Weapon_iWeaponState) == M4A1_Silencer) g_bWeaponDataSave[M4A1_Silencer]{id} = !g_bWeaponDataSave[M4A1_Silencer]{id}
+		case WEAPON_USP: if (get_member(iItem, m_Weapon_iWeaponState) == USP_Silencer)  g_bWeaponDataSave[USP_Silencer]{id} = !g_bWeaponDataSave[USP_Silencer]{id}
+		case WEAPON_GLOCK18: if (get_member(iItem, m_Weapon_iWeaponState) == GLOCK_BurstFire)  g_bWeaponDataSave[GLOCK_BurstFire]{id} = !g_bWeaponDataSave[GLOCK_BurstFire]{id}
+		case WEAPON_FAMAS: if (get_member(iItem, m_Weapon_iWeaponState) == FAMAS_BurstFire)  g_bWeaponDataSave[FAMAS_BurstFire]{id} = !g_bWeaponDataSave[FAMAS_BurstFire]{id}
+	}
+	*/
+	
+
 	if (!is_nullent(pActiveItem) && rg_is_primary_weapon_id(rg_get_user_active_weapon(id)))
 	{
 		ArrayGetString(Array:g_aWeapons_Short[SECTION_PRIMARY], g_iWeapons[id][PRIMARY], szWeaponShort[PRIMARY], charsmax(szWeaponShort[]))
@@ -526,6 +555,43 @@ public CBasePlayerWeapon_DefaultDeploy(const iItem, szViewModel[], szWeaponModel
 		}
 	}
 	return HC_CONTINUE
+}
+
+public CBasePlayer_AddPlayerItem(const id, const iItem)
+{
+	switch (rg_get_weapon_id(iItem))
+	{
+		case WEAPON_M4A1:
+		{
+			set_member(iItem, m_Weapon_iWeaponState, g_bWeaponDataSave[M4A1_Silencer]{id} ? M4A1_Silencer/*4*/ : 0)
+		}
+		case WEAPON_USP:
+		{
+			set_member(iItem, m_Weapon_iWeaponState, g_bWeaponDataSave[USP_Silencer]{id} ? USP_Silencer/*1*/ : 0)
+		}
+		case WEAPON_GLOCK18:
+		{
+			set_member(iItem, m_Weapon_iWeaponState, g_bWeaponDataSave[GLOCK_BurstFire]{id} ? GLOCK_BurstFire/*2*/ : 0)
+		}
+		case WEAPON_FAMAS:
+		{
+			set_member(iItem, m_Weapon_iWeaponState, g_bWeaponDataSave[FAMAS_BurstFire]{id} ? FAMAS_BurstFire/*16*/ : 0)
+		}
+	}
+}
+
+public CBasePlayer_Ham_Weapon_SecondaryAttack(iWeaponId)
+{
+	static id
+	id = get_member(iWeaponId, m_pPlayer)
+
+	switch (rg_get_weapon_id(iWeaponId))
+	{
+		case WEAPON_M4A1: g_bWeaponDataSave[M4A1_Silencer]{id} = !g_bWeaponDataSave[M4A1_Silencer]{id}
+		case WEAPON_USP: g_bWeaponDataSave[USP_Silencer]{id} = !g_bWeaponDataSave[USP_Silencer]{id}
+		case WEAPON_GLOCK18: g_bWeaponDataSave[GLOCK_BurstFire]{id} = !g_bWeaponDataSave[GLOCK_BurstFire]{id}
+		case WEAPON_FAMAS: g_bWeaponDataSave[FAMAS_BurstFire]{id} = !g_bWeaponDataSave[FAMAS_BurstFire]{id}
+	}
 }
 
 public HWM_Reload_Weapons_File(id, level, cid)
@@ -1223,7 +1289,7 @@ stock give_player_items(id)
 			return
 		}
 	}
-	
+
 	rg_give_item_ex(id, szWeaponShort[PRIMARY], GT_APPEND, -1, -1)
 	rg_give_item_ex(id, szWeaponShort[SECONDARY], GT_APPEND, -1, -1)
 
