@@ -3,6 +3,17 @@
 #include <reapi_stocks>
 #include <hamsandwich>
 
+//#define ZP_SUPPORT
+#define BIO_SUPPORT
+
+#if defined ZP_SUPPORT
+#include <zombieplague>
+#endif
+
+#if defined BIO_SUPPORT
+#include <biohazard>
+#endif
+
 enum eWeaponType
 {
 	PRIMARY,
@@ -712,6 +723,16 @@ public Toggle_Equip_PlayerCheck(id)
 		|| equal(g_eCvars[HWM_WHICH_TEAM_CAN_USE_MENU], "ct") && rg_get_user_team(id) != TEAM_CT
 		|| equal(g_eCvars[HWM_WHICH_TEAM_CAN_USE_MENU], "t") && rg_get_user_team(id) != TEAM_TERRORIST)
 		return PLUGIN_HANDLED
+
+	#if defined ZP_SUPPORT
+	if (zp_get_user_zombie(id))
+		return PLUGIN_HANDLED
+	#endif
+
+	#if defined BIO_SUPPORT
+	if (is_user_zombie(id))
+		return PLUGIN_HANDLED
+	#endif
 
 	if (!rg_has_item_by_name(id, "weapon_knife"))
 		rg_give_item(id, "weapon_knife")
