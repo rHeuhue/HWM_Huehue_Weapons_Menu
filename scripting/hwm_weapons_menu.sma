@@ -4,15 +4,20 @@
 #include <hamsandwich>
 
 //#define ZP_SUPPORT
-#define BIO_SUPPORT
+//#define BIO_SUPPORT
 
 #if defined ZP_SUPPORT
 #include <zombieplague>
+
+#define is_player_zombie(%0) zp_get_user_zombie(%0)
 #endif
 
 #if defined BIO_SUPPORT
 #include <biohazard>
+
+#define is_player_zombie(%0) is_user_zombie(%0)
 #endif
+
 
 enum eWeaponType
 {
@@ -327,6 +332,11 @@ public CBasePlayer_Spawn(id)
 		if (g_eCvars[HWM_MENU_WARMUP])
 			return
 
+		#if defined ZP_SUPPORT || defined BIO_SUPPORT
+		if (is_player_zombie(id))
+			return
+		#endif
+
 		if (g_eCvars[HWM_INFINITE_ROUND] || get_member_game(m_iTotalRoundsPlayed) >= g_eCvars[HWM_MIN_ROUND])
 		{
 			g_bMenuClosedByPlayer[id] = false
@@ -511,7 +521,7 @@ public CBasePlayerWeapon_DefaultDeploy(const iItem, szViewModel[], szWeaponModel
 	}
 
 	/*
-	// Not so good case since player is able to not detect weapon state change if weapons not swap!!
+	// Not so good case since player is not able to detect weapon state change if weapons were not swapped!!
 	// Not recommended to use
 	switch (rg_get_user_active_weapon(id))
 	{
@@ -634,6 +644,20 @@ public Hook_DropCommand(id)
 
 public Weapons_Command(id)
 {
+	#if defined ZP_SUPPORT || defined BIO_SUPPORT
+	if (is_player_zombie(id))
+	{
+		client_print_color_ex(id, "%L", id, "HWM_GUNS_HUMAN_ONLY_ZP_BIO_SUP")
+		return PLUGIN_HANDLED
+	}
+	#endif
+
+	if (!is_user_alive(id) && g_bChoiceSaved{id})
+	{
+		goto ReEnableMenu
+		return PLUGIN_HANDLED
+	}
+
 	if (!g_bChoiceSaved{id} && g_iMenuUsedTimes{id} > g_eCvars[HWM_MENU_USES_PER_ROUND])
 	{
 		client_print_color_ex(id, "%L", id, g_eCvars[HWM_INFINITE_ROUND] == 1 ? "HWM_GUNS_ALREADY_ENABLED_RESPAWN" : "HWM_GUNS_ALREADY_ENABLED_ROUND")
@@ -687,6 +711,7 @@ public Weapons_Command(id)
 			rg_give_user_money(id, iTotalPrice, true)
 		}
 
+		ReEnableMenu:
 		if (g_bChoiceSaved{id})
 		{
 			g_bChoiceSaved{id} = false
@@ -724,13 +749,8 @@ public Toggle_Equip_PlayerCheck(id)
 		|| equal(g_eCvars[HWM_WHICH_TEAM_CAN_USE_MENU], "t") && rg_get_user_team(id) != TEAM_TERRORIST)
 		return PLUGIN_HANDLED
 
-	#if defined ZP_SUPPORT
-	if (zp_get_user_zombie(id))
-		return PLUGIN_HANDLED
-	#endif
-
-	#if defined BIO_SUPPORT
-	if (is_user_zombie(id))
+	#if defined ZP_SUPPORT || defined BIO_SUPPORT
+	if (is_player_zombie(id))
 		return PLUGIN_HANDLED
 	#endif
 

@@ -32,3 +32,5 @@ HWM_SECONDARY_WEAPON_TITLE = \wSecondary Weapons:
 HWM_SECONDARY_WEAPON_PRICE_MENU = %s \r[\y%i$\r]
 
 HWM_DONT_HAVE_ENOUGH_MONEY = You don't have enough money!
+
+HWM_GUNS_HUMAN_ONLY_ZP_BIO_SUP = ^1Only ^3Humans ^1can access this command!
