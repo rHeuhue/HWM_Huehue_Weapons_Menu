@@ -968,10 +968,12 @@ stock rg_set_entity_model(const entity, const model[], const modelindex) {
 	set_entvar(entity, var_modelindex, modelindex)
 }
 
+#if !defined rg_remove_entity
 stock rg_remove_entity(const entity) {
 	if (!is_nullent(entity))
 		set_entvar(entity, var_flags, get_entvar(entity, var_flags) | FL_KILLME)
 }
+#endif
 
 /* Sets player/entity rendering mode. 
 */
@@ -1028,10 +1030,11 @@ stock rg_give_item_fix(const player, const pszName[], GiveType:type = GT_APPEND)
 * @param type       Look at the enums with name GiveType
 * @param ammo 		Amount of ammo item will have when given (-1 equal to max weapon gun clip size)
 * @param bpammo 	Amount of backpack ammo item will have when given (-1 equal to max weapon rounds size)
+* @param uid 		Sets a unique index for the entity
 *
 * @return			Index of entity if successfull, -1 otherwise
 */
-stock rg_give_item_ex(const player, pszName[], GiveType:type = GT_APPEND, ammo = 0, bpammo = 0) {
+stock rg_give_item_ex(const player, pszName[], GiveType:type = GT_APPEND, ammo = 0, bpammo = 0, uid = 0) {
 	new WeaponIdType:iWeaponID = rg_get_weapon_info(pszName, WI_ID)
 
 	if(rg_is_primary_weapon_id(iWeaponID) && get_member(player, m_bOwnsShield))
@@ -1039,7 +1042,10 @@ stock rg_give_item_ex(const player, pszName[], GiveType:type = GT_APPEND, ammo =
 		rg_remove_item(player, "weapon_shield")
 	}
 
-	rg_give_item(player, pszName, type)
+	if (uid)
+		uid = rg_give_custom_item(player, pszName, type, uid)
+	else
+		uid = rg_give_item(player, pszName, type)
 
 	if (!rg_is_grenade_weapon_id(iWeaponID))
 	{
@@ -1056,6 +1062,8 @@ stock rg_give_item_ex(const player, pszName[], GiveType:type = GT_APPEND, ammo =
 
 	if (contain(pszName, "shield") || iWeaponID == WEAPON_SHIELDGUN)
 		rg_give_item_fix(player, pszName, type)
+
+	return uid
 }
 
 stock rg_give_nades(const player, grenade[], GiveType:type = GT_APPEND, amount = 0) {
@@ -1104,7 +1112,7 @@ stock color_gradient(Float:c1[3], Float:c2[3], Float:value, Float:range, Float:r
 	* Creates explode of HE Grenade
 	*
 	*	@param owner		Owner of the explode
-	*	@param fOrigin		coordinates XYZ
+	*	@param vecOrigin	coordinates XYZ
 	*	@param fDamage		Damage
 	*	@param fRadius		Radius of the explode
 	*
@@ -1123,6 +1131,30 @@ stock rg_create_explode_grenade(const owner = 0, Float:vecOrigin[XYZ] = {0.0, 0.
 	set_entvar(entity, var_owner, owner)
 	rg_dmg_radius(vecOrigin, entity, owner, fDamage, fRadius, 0, DMG_GRENADE)
 	set_entvar(entity, var_flags, FL_KILLME)
+}
+
+/**
+	* Creates bigger explosion effect
+	*
+	* @param vecOrigin 		coordinates XYZ
+	* @param sprite			Sprite to show [Default: "sprites/zerogxplode.spr"]
+	* @param size			Size of the sprite showing [Default: 30]
+	& @param speed 			How fast the sprite will be shown & hidden [Default: 15]
+	*
+	* @return	
+*/
+
+stock UTIL_BiggerExplosion(Float:vecOrigin[XYZ], sprite, size = 30, speed = 15) {
+	message_begin(MSG_BROADCAST, SVC_TEMPENTITY)
+	write_byte(TE_EXPLOSION)
+	write_coord_f(vecOrigin[X])
+	write_coord_f(vecOrigin[Y])
+	write_coord_f(vecOrigin[Z])
+	write_short(sprite)
+	write_byte(size)
+	write_byte(speed)
+	write_byte(0)
+	message_end()
 }
 
 stock rg_send_float_bartime(id, Float:flTime, bool:observer = true) {
